@@ -3,8 +3,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-// Add this to your local .env file or GitHub Secrets:
-// FIREBASE_URL=https://gen-lang-client-0120793291-default-rtdb.firebaseio.com
+// Pulls from GitHub Secrets, or defaults to your specific database
 const FIREBASE_URL = process.env.FIREBASE_URL || "https://gen-lang-client-0120793291-default-rtdb.firebaseio.com";
 const orderStates = {}; 
 
@@ -68,6 +67,7 @@ async function startBot() {
 
             await sock.sendPresenceUpdate('composing', sender);
 
+            // --- WAITING FOR ADDRESS STATE ---
             if (orderStates[sender]?.step === 'WAITING_FOR_ADDRESS') {
                 const customerDetails = text; 
                 const item = orderStates[sender].item;
@@ -99,6 +99,7 @@ async function startBot() {
                 return;
             }
 
+            // --- ORDERING A SPECIFIC ITEM ---
             if (text.startsWith("order ")) {
                 const productRequested = text.replace("order ", "").trim();
                 const currentMenu = await getMenuFromApp();
@@ -115,9 +116,13 @@ async function startBot() {
                 if (matchedItem.imageUrl) await sock.sendMessage(sender, { image: { url: matchedItem.imageUrl }, caption: captionText });
                 else await sock.sendMessage(sender, { text: captionText });
             }
+            
+            // --- GENERAL ORDER KEYWORD ---
             else if (text === "order") { 
                 await sock.sendMessage(sender, { text: "🛒 *How to order:*\nPlease type 'order' followed by the dish name.\nExample: *order The Crown Premium Burger*" });
             }
+            
+            // --- MENU KEYWORDS ---
             else if (text.match(/menu|price|list|food/)) {
                 const currentMenu = await getMenuFromApp();
                 if (currentMenu.length === 0) return await sock.sendMessage(sender, { text: "⚠️ Menu updating. Please check back!" });
@@ -128,9 +133,19 @@ async function startBot() {
                 
                 await sock.sendMessage(sender, { text: menuMessage });
             }
+            
+            // --- GREETINGS ---
             else if (text.match(/hi|hello|hey|salam|assalam/)) {
                 await sock.sendMessage(sender, { text: "👑 *Welcome to The Crown Cafe, Charsadda!*\n\nI am your AI Assistant. Type *menu* to see our delicious Steaks, Pizzas, and Burgers, or type *order [dish]* to buy instantly!" });
             }
+            
+            // --- FALLBACK (CATCH-ALL) ---
+            else {
+                await sock.sendMessage(sender, { 
+                    text: "🤔 I didn't quite catch that.\n\nTo buy something, please make sure to type the word *order* before the food name.\n\n*Example:* order Zinger Burger\n\nType *menu* to see our full list!" 
+                });
+            }
+            
         } catch (error) { console.error("❌ Error:", error); }
     });
 }
