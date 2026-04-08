@@ -1,8 +1,9 @@
-name: JavaGoat-WhatsApp-Bot-Advanced
+name: Crown-Cafe-WhatsApp-Bot
 
 on:
   workflow_dispatch:
   schedule:
+    # Restarts the bot automatically every 5 hours to prevent session timeouts
     - cron: '0 */5 * * *' 
 
 jobs:
@@ -16,12 +17,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm' # Caches dependencies to speed up workflow
+          cache: 'npm' # Caches dependencies to drastically speed up your GitHub Actions build times
 
       - name: Install Dependencies
-        run: npm ci # Uses package-lock.json for strict versioning
+        run: npm ci # Uses package-lock.json for a strict, reliable installation
 
-      - name: Start AI Bot
+      - name: Start Crown Cafe AI Bot
         env:
+          # Pulls the secure URL from your GitHub Repository Secrets
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
         run: npm start
