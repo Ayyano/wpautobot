@@ -6,6 +6,10 @@ on:
     # Restarts the bot automatically every 5 hours to prevent session timeouts
     - cron: '0 */5 * * *' 
 
+# 🌟 Added this to fix the Node.js 20 deprecation warning
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # 🌟 Upgraded to Node 24
           cache: 'npm' # Caches dependencies to drastically speed up your GitHub Actions build times
 
       - name: Install Dependencies
