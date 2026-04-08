@@ -1,1 +1,1 @@
-{\n  "name": "wpautobot",\n  "version": "1.0.0",\n  "description": "A WordPress bot.",\n  "dependencies": {\n    "@whiskeysockets/baileys": "latest",\n    "qrcode-terminal": "latest",\n    "pino": "latest"\n  },\n  "devDependencies": {},\n  "scripts": {\n    "start": "node index.js"\n  }\n}
+{"name":"wpautobot","version":"1.0.0","description":"WhatsApp AI Bot","main":"index.js","type":"commonjs","scripts":{"start":"node index.js"},"dependencies":{"@whiskeysockets/baileys":"^6.7.18","firebase-admin":"^12.7.0","qrcode-terminal":"^0.12.0"}}
