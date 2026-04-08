@@ -1,15 +1,25 @@
 {
-  "name": "crown-cafe-whatsapp-bot",
-  "version": "2.0.0",
-  "description": "WhatsApp Bot linked to Crown Cafe App",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
-    "dotenv": "^16.4.5",
-    "pino": "^8.19.0",
-    "qrcode-terminal": "^0.12.0"
+  "staff_roles": {
+    "UID_OF_PRINCIPAL_HERE": {
+      "name": "Sir Ali Khan",
+      "role": "principal",
+      "email": "principal@charsaddaschool.com"
+    },
+    "UID_OF_BABU_HERE": {
+      "name": "Aslam (Babu)",
+      "role": "babu",
+      "email": "babu@charsaddaschool.com"
+    },
+    "UID_OF_FINANCE_HERE": {
+      "name": "Farooq Bhai",
+      "role": "finance",
+      "email": "finance@charsaddaschool.com"
+    },
+    "UID_OF_TEACHER_HERE": {
+      "name": "Miss Sana",
+      "role": "teacher",
+      "email": "sana@charsaddaschool.com",
+      "assigned_classes": ["9th-A", "10th-B"]
+    }
   }
 }
