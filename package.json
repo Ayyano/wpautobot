@@ -10,7 +10,5 @@
   "keywords": ["whatsapp", "bot"],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    // Add your project dependencies here
-  }
+  "dependencies": {}
 }
