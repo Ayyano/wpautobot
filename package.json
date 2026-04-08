@@ -1,24 +1,15 @@
 {
-  "dishes": {
-    "steak_zing_c": { "name": "Zingara Steak (Chicken)", "price": 1299, "category": "Steaks", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3143/3143645.png" },
-    "steak_zing_b": { "name": "Zingara Steak (Beef)", "price": 1599, "category": "Steaks", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3143/3143645.png" },
-    "pizza_tikka_m": { "name": "Chicken Tikka Pizza (Medium)", "price": 1099, "category": "Pizza", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
-    "pizza_crown_m": { "name": "The Crown Special Pizza (Medium)", "price": 1149, "category": "Pizza", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3132/3132693.png" },
-    "burger_zinger": { "name": "Zinger Burger", "price": 449, "category": "Burgers", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3075/3075977.png" },
-    "burger_mighty": { "name": "Mighty Zinger Burger", "price": 599, "category": "Burgers", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3075/3075977.png" },
-    "burger_crown": { "name": "The Crown Premium Burger", "price": 649, "category": "Burgers", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3075/3075977.png" },
-    "app_fries": { "name": "French Fries", "price": 249, "category": "Appetizers", "imageUrl": "https://cdn-icons-png.flaticon.com/512/113/113339.png" },
-    "app_wings": { "name": "The Crown Special Wings (8 Pcs)", "price": 599, "category": "Appetizers", "imageUrl": "https://cdn-icons-png.flaticon.com/512/2916/2916294.png" },
-    "pasta_alfredo": { "name": "Alfredo Pasta", "price": 599, "category": "Chinese & Pasta", "imageUrl": "https://cdn-icons-png.flaticon.com/512/2090/2090111.png" },
-    "handi_special": { "name": "The Crown's Special Handi", "price": 1349, "category": "Pakistani", "imageUrl": "https://cdn-icons-png.flaticon.com/512/3274/3274099.png" },
-    "roll_special": { "name": "The Crown's Special Roll", "price": 549, "category": "Shawarma", "imageUrl": "https://cdn-icons-png.flaticon.com/512/184/184406.png" },
-    "drink_mint": { "name": "Mint Margarita", "price": 349, "category": "Beverages", "imageUrl": "https://cdn-icons-png.flaticon.com/512/2405/2405479.png" }
+  "name": "crown-cafe-whatsapp-bot",
+  "version": "2.0.0",
+  "description": "WhatsApp Bot linked to Crown Cafe App",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
   },
-  "restaurants": {
-    "crown_cafe_main": {
-      "name": "Crown Cafe Charsadda",
-      "rating": 4.9,
-      "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-    }
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.6.0",
+    "dotenv": "^16.4.5",
+    "pino": "^8.19.0",
+    "qrcode-terminal": "^0.12.0"
   }
 }
