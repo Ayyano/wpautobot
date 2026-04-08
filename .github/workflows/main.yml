@@ -6,7 +6,7 @@ on:
     # Restarts the bot automatically every 5 hours to prevent session timeouts
     - cron: '0 */5 * * *' 
 
-# 🌟 Added this to fix the Node.js 20 deprecation warning
+# Forces GitHub's internal actions to use the modern Node 24 engine
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -20,14 +20,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # 🌟 Upgraded to Node 24
-          cache: 'npm' # Caches dependencies to drastically speed up your GitHub Actions build times
+          node-version: '24' 
+          cache: 'npm' # Speeds up future workflow runs
 
       - name: Install Dependencies
-        run: npm ci # Uses package-lock.json for a strict, reliable installation
+        # 🌟 Changed to 'npm install' to fix the missing package-lock.json error
+        run: npm install 
 
       - name: Start Crown Cafe AI Bot
         env:
-          # Pulls the secure URL from your GitHub Repository Secrets
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
         run: npm start
