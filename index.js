@@ -1,81 +1,84 @@
-sock.ev.on("messages.upsert", async ({ messages, type }) => {
-  if (type !== "notify") return;
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion
+} = require("@whiskeysockets/baileys");
+const qrcode = require("qrcode-terminal");
+const admin = require("firebase-admin");
 
-  const msg = messages[0];
-  if (!msg.message) return;
+// Firebase Admin
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
-  const sender = msg.key.remoteJid;
-  const text =
-    msg.message.conversation ||
-    msg.message.extendedTextMessage?.text ||
-    "";
-
-  const message = text.trim().toLowerCase();
-
-  console.log(`Message from ${sender}: ${message}`);
-
-  const menuItems = {
-    "pizza": 1200,
-    "burger": 850,
-    "zinger burger": 950,
-    "fries": 350,
-    "shawarma": 500,
-    "biryani": 700,
-    "coffee": 300
-  };
-
-  if (message === "hi" || message === "hello" || message === "start") {
-    await sock.sendMessage(sender, {
-      text:
-        "Welcome to JavaGoat\n\nType *menu* to see available food items.\nType *order item-name* to place an order.\n\nExample: *order pizza*"
-    });
-    return;
-  }
-
-  if (message === "menu") {
-    let menuText = "*JavaGoat Menu*\n\n";
-    Object.entries(menuItems).forEach(([name, price]) => {
-      menuText += `• ${name} - Rs. ${price}\n`;
-    });
-    menuText += "\nTo order, type: *order pizza*";
-    await sock.sendMessage(sender, { text: menuText });
-    return;
-  }
-
-  if (message.startsWith("order ")) {
-    const itemName = message.replace("order ", "").trim();
-
-    if (!itemName) {
-      await sock.sendMessage(sender, {
-        text: "Please type an item name.\nExample: *order pizza*"
-      });
-      return;
-    }
-
-    const matchedItem = Object.keys(menuItems).find(
-      (item) => item.toLowerCase() === itemName
-    );
-
-    if (!matchedItem) {
-      await sock.sendMessage(sender, {
-        text:
-          `Sorry, *${itemName}* is not available.\n\nType *menu* to see available items.`
-      });
-      return;
-    }
-
-    const price = menuItems[matchedItem];
-
-    await sock.sendMessage(sender, {
-      text:
-        `Order confirmed\n\nItem: *${matchedItem}*\nPrice: *Rs. ${price}*\n\nReply with your *name, address, and phone number* to complete the order.`
-    });
-
-    return;
-  }
-
-  await sock.sendMessage(sender, {
-    text:
-      "🤔 I didn't quite catch that.\n\nType *menu* to see our food list, or *order [food]* to place an order!\n\nExample: *order pizza*"
-  });
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://gen-lang-client-0120793291-default-rtdb.firebaseio.com"
 });
+
+const db = admin.database();
+
+// In-memory session state
+const userSessions = {};
+
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("auth_info");
+  const { version } = await fetchLatestBaileysVersion();
+
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    printQRInTerminal: false
+  });
+
+  sock.ev.on("creds.update", saveCreds);
+
+  sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      console.log("Scan this QR:");
+      qrcode.generate(qr, { small: true });
+    }
+
+    if (connection === "open") {
+      console.log("WhatsApp bot connected");
+    }
+
+    if (connection === "close") {
+      const shouldReconnect =
+        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
+      console.log("Connection closed");
+
+      if (shouldReconnect) {
+        startBot();
+      } else {
+        console.log("Logged out. Delete auth_info and login again.");
+      }
+    }
+  });
+
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    if (type !== "notify") return;
+
+    for (const msg of messages) {
+      if (!msg.message || msg.key.fromMe) continue;
+
+      const sender = msg.key.remoteJid;
+      const text =
+        msg.message.conversation ||
+        msg.message.extendedTextMessage?.text ||
+        msg.message.imageMessage?.caption ||
+        "";
+
+      const message = text.trim().toLowerCase();
+      if (!message) continue;
+
+      console.log("Incoming:", sender, message);
+
+      const menuItems = {
+        pizza: 1200,
+        burger: 850,
+        "zinger burger": 950,
+        fries: 350,
+       
