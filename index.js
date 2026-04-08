@@ -3,7 +3,9 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-const FIREBASE_URL = process.env.FIREBASE_URL;
+// Add this to your local .env file or GitHub Secrets:
+// FIREBASE_URL=https://gen-lang-client-0120793291-default-rtdb.firebaseio.com
+const FIREBASE_URL = process.env.FIREBASE_URL || "https://gen-lang-client-0120793291-default-rtdb.firebaseio.com";
 const orderStates = {}; 
 
 async function getMenuFromApp() {
@@ -27,11 +29,6 @@ async function getMenuFromApp() {
 }
 
 async function startBot() {
-    if (!FIREBASE_URL) {
-        console.error("❌ ERROR: FIREBASE_URL is missing in environment variables!");
-        process.exit(1);
-    }
-
     const { state, saveCreds } = await useMultiFileAuthState('session_data');
     const { version } = await fetchLatestBaileysVersion();
 
@@ -40,30 +37,22 @@ async function startBot() {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: ["JavaGoat", "Safari", "1.0.0"] 
+        browser: ["CrownCafe", "Safari", "1.0.0"] 
     });
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-        
         if (qr) {
             console.clear(); 
             console.log('\n==================================================');
-            console.log('📱 SCAN THIS QR CODE WITH WHATSAPP');
+            console.log('👑 SCAN THIS QR CODE FOR CROWN CAFE BOT');
             console.log('==================================================\n');
             qrcode.generate(qr, { small: true }); 
         }
-
-        if (connection === 'open') console.log('✅ JAVAGOAT AI IS ONLINE!');
+        if (connection === 'open') console.log('✅ CROWN CAFE AI IS ONLINE!');
         if (connection === 'close') {
             const reason = lastDisconnect?.error?.output?.statusCode;
-            console.log(`⚠️ Connection closed. Reason: ${reason}`);
-            if (reason !== DisconnectReason.loggedOut) {
-                console.log('🔄 Reconnecting...');
-                startBot();
-            } else {
-                console.log('❌ Logged out. Please delete "session_data" folder and scan again.');
-            }
+            if (reason !== DisconnectReason.loggedOut) startBot();
         }
     });
 
@@ -77,9 +66,6 @@ async function startBot() {
             const sender = msg.key.remoteJid;
             const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").toLowerCase().trim();
 
-            console.log(`📩 Query from ${sender.split('@')[0]}: ${text}`);
-
-            // Show typing indicator
             await sock.sendPresenceUpdate('composing', sender);
 
             if (orderStates[sender]?.step === 'WAITING_FOR_ADDRESS') {
@@ -87,37 +73,28 @@ async function startBot() {
                 const item = orderStates[sender].item;
                 const customerWaNumber = sender.split('@')[0];
 
-                const javaGoatOrder = {
+                const crownOrder = {
                     userId: `whatsapp_${customerWaNumber}`,
-                    userEmail: "whatsapp@javagoat.com",
+                    userEmail: "whatsapp@crowncafe.com",
                     phone: customerWaNumber,
                     address: customerDetails,
-                    location: { lat: 0, lng: 0 },
-                    items: [{
-                        id: item.id,
-                        name: item.name,
-                        price: parseFloat(item.price),
-                        img: item.imageUrl,
-                        quantity: 1
-                    }],
-                    total: (parseFloat(item.price) + 50).toFixed(2),
+                    location: { lat: 34.1485, lng: 71.7402 }, // Default Charsadda coordinates
+                    items: [{ id: item.id, name: item.name, price: parseFloat(item.price), img: item.imageUrl, quantity: 1 }],
+                    total: (parseFloat(item.price) + 50).toFixed(2), // Delivery Fee
                     status: "Placed",
-                    method: "Cash on Delivery (WhatsApp)",
+                    method: "Cash on Delivery",
                     timestamp: new Date().toISOString()
                 };
 
-                const response = await fetch(`${FIREBASE_URL}/orders.json`, {
+                await fetch(`${FIREBASE_URL}/orders.json`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(javaGoatOrder)
+                    body: JSON.stringify(crownOrder)
                 });
-
-                if (!response.ok) throw new Error("Failed to save order to Firebase");
 
                 await sock.sendMessage(sender, { 
-                    text: `✅ *Order Placed Successfully!*\n\nThank you! Your order for *${item.name}* is being prepared.\n\n*Total:* ₹${javaGoatOrder.total} (Inc. Delivery)\n*Status:* Preparing\n\nWe will deliver it to your address soon.` 
+                    text: `✅ *Order Placed Successfully!*\n\nThank you for choosing Crown Cafe Charsadda!\nYour order for *${item.name}* is being prepared.\n\n*Total:* Rs. ${crownOrder.total} (Inc. Delivery)\n*Status:* Preparing\n\n📍 We will deliver to your address shortly. Need help? Call us at 0371-5300200.` 
                 });
-                
                 delete orderStates[sender]; 
                 return;
             }
@@ -128,48 +105,34 @@ async function startBot() {
                 const matchedItem = currentMenu.find(item => item.name.toLowerCase().includes(productRequested));
 
                 if (!matchedItem) {
-                    await sock.sendMessage(sender, { text: `❌ Sorry, we couldn't find *${productRequested}* in our menu today.\n\nType *menu* to see all available items.` });
+                    await sock.sendMessage(sender, { text: `❌ Sorry, we couldn't find *${productRequested}*.\nType *menu* to see all available items.` });
                     return;
                 }
 
                 orderStates[sender] = { step: 'WAITING_FOR_ADDRESS', item: matchedItem };
-                const captionText = `🛒 *Order Started!*\n\nYou selected: *${matchedItem.name}* (₹${matchedItem.price})\n\nPlease reply with your *Full Name, Phone Number, and Delivery Address*.`;
+                const captionText = `🛒 *Order Started!*\n\nYou selected: *${matchedItem.name}* (Rs. ${matchedItem.price})\n\nPlease reply with your *Full Name, Phone Number, and Delivery Address in Charsadda*.`;
                 
-                if (matchedItem.imageUrl) {
-                    await sock.sendMessage(sender, { image: { url: matchedItem.imageUrl }, caption: captionText });
-                } else {
-                    await sock.sendMessage(sender, { text: captionText });
-                }
+                if (matchedItem.imageUrl) await sock.sendMessage(sender, { image: { url: matchedItem.imageUrl }, caption: captionText });
+                else await sock.sendMessage(sender, { text: captionText });
             }
             else if (text === "order") { 
-                await sock.sendMessage(sender, { text: "🛒 *How to order:*\nPlease type 'order' followed by the dish name.\nExample: *order pizza*" });
+                await sock.sendMessage(sender, { text: "🛒 *How to order:*\nPlease type 'order' followed by the dish name.\nExample: *order The Crown Premium Burger*" });
             }
             else if (text.match(/menu|price|list|food/)) {
                 const currentMenu = await getMenuFromApp();
-                if (currentMenu.length === 0) {
-                    await sock.sendMessage(sender, { text: "⚠️ Our menu is currently updating. Please check back soon!" });
-                    return;
-                }
+                if (currentMenu.length === 0) return await sock.sendMessage(sender, { text: "⚠️ Menu updating. Please check back!" });
 
-                let menuMessage = "🍔 *JAVAGOAT LIVE MENU* 🍕\n\n";
-                currentMenu.forEach(item => { menuMessage += `🔸 *${item.name}* - ₹${item.price}\n`; });
+                let menuMessage = "👑 *THE CROWN CAFE MENU* 👑\n📍 Tangi Road, Rajjar Bazar, Charsadda\n\n";
+                currentMenu.forEach(item => { menuMessage += `🔸 *${item.name}* - Rs. ${item.price}\n`; });
                 menuMessage += "\n_To order, reply with 'order [dish name]'_";
                 
                 await sock.sendMessage(sender, { text: menuMessage });
             }
-            else if (text.match(/hi|hello|hey/)) {
-                await sock.sendMessage(sender, { text: "👋 *Welcome to JavaGoat!*\n\nI am your AI Assistant. Type *menu* to see our delicious food, or type *order [dish]* to buy instantly!" });
+            else if (text.match(/hi|hello|hey|salam|assalam/)) {
+                await sock.sendMessage(sender, { text: "👑 *Welcome to The Crown Cafe, Charsadda!*\n\nI am your AI Assistant. Type *menu* to see our delicious Steaks, Pizzas, and Burgers, or type *order [dish]* to buy instantly!" });
             }
-            else if (text.match(/contact|call/)) {
-                await sock.sendMessage(sender, { text: "📞 *Contact JavaGoat:*\n\n- *Email:* support@javagoat.com" });
-            }
-            else {
-                await sock.sendMessage(sender, { text: "🤔 I didn't quite catch that.\n\nType *menu* to see our food list, or *order [food]* to place an order!" });
-            }
-        } catch (error) {
-            console.error("❌ Message handling error:", error);
-        }
+        } catch (error) { console.error("❌ Error:", error); }
     });
 }
 
-startBot().catch(err => console.error("❌ Fatal Error:", err));
+startBot();
