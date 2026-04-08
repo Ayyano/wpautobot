@@ -3,7 +3,6 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLat
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
 
-// Pulls from GitHub Secrets, or defaults to your specific database
 const FIREBASE_URL = process.env.FIREBASE_URL || "https://gen-lang-client-0120793291-default-rtdb.firebaseio.com";
 const orderStates = {}; 
 
@@ -12,14 +11,9 @@ async function getMenuFromApp() {
         const response = await fetch(`${FIREBASE_URL}/dishes.json`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
-        
         if (!data) return [];
-        
         return Object.keys(data).map(key => ({
-            id: key,
-            name: data[key].name,
-            price: data[key].price,
-            imageUrl: data[key].imageUrl || ""
+            id: key, name: data[key].name, price: data[key].price, imageUrl: data[key].imageUrl || ""
         }));
     } catch (error) {
         console.error("❌ Failed to fetch menu:", error.message);
@@ -67,7 +61,7 @@ async function startBot() {
 
             await sock.sendPresenceUpdate('composing', sender);
 
-            // --- WAITING FOR ADDRESS STATE ---
+            // --- 1. PROCESS CHECKOUT (WAITING FOR ADDRESS) ---
             if (orderStates[sender]?.step === 'WAITING_FOR_ADDRESS') {
                 const customerDetails = text; 
                 const item = orderStates[sender].item;
@@ -78,75 +72,91 @@ async function startBot() {
                     userEmail: "whatsapp@crowncafe.com",
                     phone: customerWaNumber,
                     address: customerDetails,
-                    location: { lat: 34.1485, lng: 71.7402 }, // Default Charsadda coordinates
+                    location: { lat: 34.1485, lng: 71.7402 },
                     items: [{ id: item.id, name: item.name, price: parseFloat(item.price), img: item.imageUrl, quantity: 1 }],
-                    total: (parseFloat(item.price) + 50).toFixed(2), // Delivery Fee
+                    total: (parseFloat(item.price) + 50).toFixed(2),
                     status: "Placed",
                     method: "Cash on Delivery",
                     timestamp: new Date().toISOString()
                 };
 
-                await fetch(`${FIREBASE_URL}/orders.json`, {
+                // SEND TO FIREBASE
+                const response = await fetch(`${FIREBASE_URL}/orders.json`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(crownOrder)
                 });
 
-                await sock.sendMessage(sender, { 
-                    text: `✅ *Order Placed Successfully!*\n\nThank you for choosing Crown Cafe Charsadda!\nYour order for *${item.name}* is being prepared.\n\n*Total:* Rs. ${crownOrder.total} (Inc. Delivery)\n*Status:* Preparing\n\n📍 We will deliver to your address shortly. Need help? Call us at 0371-5300200.` 
-                });
-                delete orderStates[sender]; 
-                return;
-            }
-
-            // --- ORDERING A SPECIFIC ITEM ---
-            if (text.startsWith("order ")) {
-                const productRequested = text.replace("order ", "").trim();
-                const currentMenu = await getMenuFromApp();
-                const matchedItem = currentMenu.find(item => item.name.toLowerCase().includes(productRequested));
-
-                if (!matchedItem) {
-                    await sock.sendMessage(sender, { text: `❌ Sorry, we couldn't find *${productRequested}*.\nType *menu* to see all available items.` });
+                // Check if Firebase blocked the order
+                if (!response.ok) {
+                    console.error("Firebase Error: ", await response.text());
+                    await sock.sendMessage(sender, { text: `❌ *Database Error!*\n\nWe couldn't save your order. Our database is currently locked. Please call 0371-5300200 to order.` });
                     return;
                 }
 
-                orderStates[sender] = { step: 'WAITING_FOR_ADDRESS', item: matchedItem };
-                const captionText = `🛒 *Order Started!*\n\nYou selected: *${matchedItem.name}* (Rs. ${matchedItem.price})\n\nPlease reply with your *Full Name, Phone Number, and Delivery Address in Charsadda*.`;
+                await sock.sendMessage(sender, { 
+                    text: `✅ *Order Placed Successfully!*\n\nThank you for choosing Crown Cafe Charsadda!\nYour order for *${item.name}* is being prepared.\n\n*Total:* Rs. ${crownOrder.total} (Inc. Delivery)\n*Status:* Preparing\n\n📍 We will deliver to your address shortly.` 
+                });
                 
-                if (matchedItem.imageUrl) await sock.sendMessage(sender, { image: { url: matchedItem.imageUrl }, caption: captionText });
-                else await sock.sendMessage(sender, { text: captionText });
+                delete orderStates[sender]; // Clear state
+                return; // Stop processing further
             }
-            
-            // --- GENERAL ORDER KEYWORD ---
-            else if (text === "order") { 
-                await sock.sendMessage(sender, { text: "🛒 *How to order:*\nPlease type 'order' followed by the dish name.\nExample: *order The Crown Premium Burger*" });
+
+            // --- 2. GREETINGS ---
+            if (text.match(/^(hi|hello|hey|salam|assalam)/)) {
+                await sock.sendMessage(sender, { text: "👑 *Welcome to The Crown Cafe, Charsadda!*\n\nI am your AI Assistant. Type *menu* to see our delicious food, or just type the *name of the dish* you want to buy!" });
+                return;
             }
-            
-            // --- MENU KEYWORDS ---
-            else if (text.match(/menu|price|list|food/)) {
+
+            // --- 3. MENU KEYWORDS ---
+            if (text.match(/^(menu|price|list|food)$/)) {
                 const currentMenu = await getMenuFromApp();
                 if (currentMenu.length === 0) return await sock.sendMessage(sender, { text: "⚠️ Menu updating. Please check back!" });
 
                 let menuMessage = "👑 *THE CROWN CAFE MENU* 👑\n📍 Tangi Road, Rajjar Bazar, Charsadda\n\n";
                 currentMenu.forEach(item => { menuMessage += `🔸 *${item.name}* - Rs. ${item.price}\n`; });
-                menuMessage += "\n_To order, reply with 'order [dish name]'_";
+                menuMessage += "\n_To order, simply reply with the dish name!_";
                 
                 await sock.sendMessage(sender, { text: menuMessage });
+                return;
             }
-            
-            // --- GREETINGS ---
-            else if (text.match(/hi|hello|hey|salam|assalam/)) {
-                await sock.sendMessage(sender, { text: "👑 *Welcome to The Crown Cafe, Charsadda!*\n\nI am your AI Assistant. Type *menu* to see our delicious Steaks, Pizzas, and Burgers, or type *order [dish]* to buy instantly!" });
+
+            // --- 4. INSTRUCTIONS KEYWORD ---
+            if (text === "order") { 
+                await sock.sendMessage(sender, { text: "🛒 *How to order:*\nJust type the name of the food you want!\nExample: *Zinger Burger*" });
+                return;
             }
-            
-            // --- FALLBACK (CATCH-ALL) ---
-            else {
-                await sock.sendMessage(sender, { 
-                    text: "🤔 I didn't quite catch that.\n\nTo buy something, please make sure to type the word *order* before the food name.\n\n*Example:* order Zinger Burger\n\nType *menu* to see our full list!" 
-                });
+
+            // --- 5. SMART DISH DETECTION ---
+            const currentMenu = await getMenuFromApp();
+            const cleanText = text.replace("order ", "").trim();
+            let matchedItem = null;
+
+            // Only search if they typed at least 3 letters (prevents matching "ok" or "")
+            if (cleanText.length > 2) {
+                matchedItem = currentMenu.find(item => 
+                    item.name.toLowerCase().includes(cleanText) || 
+                    cleanText.includes(item.name.toLowerCase())
+                );
             }
-            
-        } catch (error) { console.error("❌ Error:", error); }
+
+            if (matchedItem) {
+                orderStates[sender] = { step: 'WAITING_FOR_ADDRESS', item: matchedItem };
+                const captionText = `🛒 *Order Started!*\n\nYou selected: *${matchedItem.name}* (Rs. ${matchedItem.price})\n\nPlease reply with your *Full Name, Phone Number, and Delivery Address in Charsadda*.`;
+                
+                if (matchedItem.imageUrl) await sock.sendMessage(sender, { image: { url: matchedItem.imageUrl }, caption: captionText });
+                else await sock.sendMessage(sender, { text: captionText });
+                return;
+            }
+
+            // --- 6. FALLBACK (IF NOTHING MATCHES) ---
+            await sock.sendMessage(sender, { 
+                text: "🤔 I didn't quite catch that.\n\nType *menu* to see our full list, or type the exact name of the food you want to order!" 
+            });
+
+        } catch (error) { 
+            console.error("❌ Error:", error); 
+        }
     });
 }
 
