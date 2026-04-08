@@ -21,10 +21,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24' 
-          cache: 'npm' # Speeds up future workflow runs
+          # Removed the "cache: 'npm'" line so it stops looking for a package-lock.json file
 
       - name: Install Dependencies
-        # 🌟 Changed to 'npm install' to fix the missing package-lock.json error
         run: npm install 
 
       - name: Start Crown Cafe AI Bot
