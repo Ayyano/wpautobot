@@ -1,14 +1,16 @@
 {
-  "name": "javagoat-whatsapp-bot",
+  "name": "wpautobot",
   "version": "1.0.0",
-  "description": "WhatsApp Bot linked to JavaGoat App",
+  "description": "JavaGoat WhatsApp Bot",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": ["whatsapp", "bot"],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@whiskeysockets/baileys": "6.6.0",
-    "qrcode-terminal": "^0.12.0",
-    "pino": "^8.19.0"
+    // Add your project dependencies here
   }
 }
