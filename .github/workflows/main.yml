@@ -1,4 +1,4 @@
-name: wpautobot
+name: JavaGoat-WhatsApp-Bot-Advanced
 
 on:
   workflow_dispatch:
@@ -16,9 +16,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm' # Caches dependencies to speed up workflow
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci # Uses package-lock.json for strict versioning
 
       - name: Start AI Bot
         env:
